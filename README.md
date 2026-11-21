@@ -6,7 +6,7 @@ Steam 版《深岩银河：异动核心》的 Windows Mod 管理器。
 - 用「配置档」保存不同的 Mod 组合，切换后一键应用到游戏。
 - 只改动自己安装的文件。遇到游戏目录里已有的同名文件会停下提示，不会覆盖。
 
-这是社区制作的工具，与 Ghost Ship Games 和 Nexus Mods 没有官方关系。配置档、Mod 启停和启动游戏的操作参考了 [MINT Maintained v0.6.2](https://github.com/gabrielfordevelopment/mint-maintained/releases/tag/v0.6.2)。
+这是社区制作的工具，与 Ghost Ship Games 和 Nexus Mods 没有官方关系。
 
 ## 下载
 
@@ -96,7 +96,7 @@ Steam 版《深岩银河：异动核心》的 Windows Mod 管理器。
 
 ## 文件安全
 
-管理器会记录自己安装的每个文件和它的哈希值。遇到下面的情况，它会停下并在状态栏显示文件路径，不会覆盖：
+管理器只改动自己安装的文件。遇到下面的情况，它会停下并在状态栏显示文件路径，不会覆盖：
 
 - 游戏目录里已有同名文件，且不是本工具安装的。内容完全相同的文件会直接沿用，不算冲突。
 - 本工具安装的文件被其他工具改动过。
@@ -135,43 +135,3 @@ API 密钥用 Windows DPAPI 加密，只有当前 Windows 用户能解密。换�
 
 **状态栏提示「请在设置中重新保存 Nexus API 密钥」。**
 保存的密钥无法解密，通常是换了电脑或 Windows 用户。在设置里重新填写密钥。
-
-## 从源码构建
-
-需要装有 .NET Framework 4.8 的 Windows。构建脚本使用系统自带的 C# 编译器，不需要安装 Visual Studio。
-
-```powershell
-.\build.ps1          # 生成 dist\RogueCoreNexus.exe
-.\build.ps1 -Test    # 另外构建并运行冒烟测试
-```
-
-冒烟测试用模拟的 Nexus API 和浏览器回传，检查从粘贴链接到安装完成的界面流程。它还会在单独的模拟游戏目录里，测试解包、启用和停用、冲突处理和中断恢复。
-
-### 自动构建与发布
-
-GitHub Actions 会在 Windows 上运行 `.\build.ps1 -Test`。运行的时机是：每次推送到 `main`、每个 Pull Request，以及推送 `v*` 标签时。
-
-每次运行的 Artifacts 里有两项：
-
-- 构建出的 exe
-- 测试截取的界面截图
-
-发布新版本的步骤：
-
-1. 修改 `src/AssemblyInfo.cs` 和 `src/app.manifest` 里的版本号，提交并推送到 `main`。
-2. 创建附注标签并推送，例如 `git tag -a v0.2.4 -F notes.md` 和 `git push origin v0.2.4`。
-3. 测试通过后，工作流会创建同名 Release 并上传 exe。标签的说明文字会成为 Release 说明，末尾会自动加上 exe 的 SHA-256。
-
-如果推送的标签已经有 Release，工作流只替换其中的 exe，并更新说明里的 SHA-256。
-
-### 界面图片
-
-界面用到的横幅、徽标、水晶插图和程序图标都放在 `src/assets`。它们是 `tools/generate-art.py` 用代码绘制的原创图形，没有使用游戏素材。构建脚本会把这些文件嵌入程序，并把 `app.ico` 设为 exe 图标。
-
-修改图形后，用装有 Pillow 和 NumPy 的 Python 重新生成：
-
-```powershell
-python tools\generate-art.py
-```
-
-脚本每次生成的结果完全相同，所以仓库里的图片随时可以重新生成。
