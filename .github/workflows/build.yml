@@ -3,6 +3,7 @@ name: Build
 on:
   push:
     branches: [main]
+    tags: ['v*']
   pull_request:
   workflow_dispatch:
 
@@ -32,3 +33,38 @@ jobs:
           name: ui-screenshots
           path: build/*.png
           if-no-files-found: ignore
+
+  # A pushed v* tag replaces the exe on that tag's release (or creates the release) after the tests pass.
+  release:
+    needs: windows
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: RogueCoreNexus
+
+      - name: Publish exe to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          sha=$(sha256sum RogueCoreNexus.exe | cut -d' ' -f1)
+          line="\`RogueCoreNexus.exe\` 的 SHA-256 为 \`$sha\`。"
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            gh release view "$TAG" --json body -q .body > notes.md
+            if grep -q 'SHA-256 为' notes.md; then
+              sed -i -E 's/(SHA-256 为 `)[0-9a-f]{64}/\1'"$sha"'/' notes.md
+            else
+              printf '\n%s\n' "$line" >> notes.md
+            fi
+            gh release upload "$TAG" RogueCoreNexus.exe --clobber
+            gh release edit "$TAG" --notes-file notes.md
+          else
+            printf '%s\n' "$line" > notes.md
+            gh release create "$TAG" RogueCoreNexus.exe --title "Rogue Core Nexus Manager $TAG" --notes-file notes.md
+          fi
+          echo "$TAG RogueCoreNexus.exe SHA-256 $sha"
