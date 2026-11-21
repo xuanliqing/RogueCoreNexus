@@ -1,0 +1,34 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build and run smoke tests
+        shell: powershell
+        run: .\build.ps1 -Test
+
+      - name: Upload manager
+        uses: actions/upload-artifact@v4
+        with:
+          name: RogueCoreNexus
+          path: dist/RogueCoreNexus.exe
+
+      - name: Upload UI screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-screenshots
+          path: build/*.png
+          if-no-files-found: ignore
