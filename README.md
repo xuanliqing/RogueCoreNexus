@@ -1,40 +1,177 @@
 # Rogue Core Nexus Manager
 
-面向 Steam 版《深岩银河：异动核心》的 Windows x64 Mod 管理器。配置档、Mod 启停和启动游戏的操作参考了 [MINT Maintained v0.6.2](https://github.com/gabrielfordevelopment/mint-maintained/releases/tag/v0.6.2)。
+Steam 版《深岩银河：异动核心》的 Windows Mod 管理器。
 
-## 首次使用
+- 粘贴 Nexus Mod 链接，管理器会下载 Mod、找出并下载它的前置，再安装到游戏里。
+- 用「配置档」保存不同的 Mod 组合，切换后一键应用到游戏。
+- 只改动自己安装的文件。遇到游戏目录里已有的同名文件会停下提示，不会覆盖。
 
-1. 打开 `dist\RogueCoreNexus.exe`。管理器会从 Steam 库查找游戏。也可在「设置」里选择游戏目录。
-2. 在「设置」里填写 [Nexus 个人 API 密钥](https://www.nexusmods.com/settings/api-keys)，然后保存。密钥使用 Windows DPAPI 加密保存在当前用户的本地数据中。
-3. 普通账号在「设置」里启用「浏览器回传」。如已有其他 NXM 管理器，可在同一处恢复之前的关联。
-4. 粘贴《异动核心》的 Nexus Mod 页面链接并点「安装 Mod」。一个条目有多个文件时，选择想装的版本。含 `file_id` 的链接会直接选中该文件。
+这是社区制作的工具，与 Ghost Ship Games 和 Nexus Mods 没有官方关系。配置档、Mod 启停和启动游戏的操作参考了 [MINT Maintained v0.6.2](https://github.com/gabrielfordevelopment/mint-maintained/releases/tag/v0.6.2)。
 
-**Premium 账号**通过 Nexus API 直接获取下载地址。**普通账号**在浏览器打开的 Nexus 页面确认管理器下载。网页回传 NXM 链接后，工具会接着下载、解包、安装并启用。请使用与 API 密钥相同的 Nexus 账号登录网页。[Nexus 的管理器下载说明](https://github.com/Nexus-Mods/Vortex/wiki/MODDINGWIKI-Users-General-Downloading-from-Nexus-Mods)
+## 下载
 
-## 管理配置
+从 [Releases](https://github.com/xuanliqing/RogueCoreNexus/releases/latest) 下载 `RogueCoreNexus.exe`。它是单个文件，不需要安装，放在任意文件夹里双击即可运行。
 
-- 粘贴 Nexus 链接时，管理器会检查所选文件的版本前置和 Mod 页的前置，把可下载的《异动核心》前置加入同一批安装。已下载且符合要求的前置可以复用。选中已添加的 Nexus Mod 后，点「补齐前置」可以单独执行这项操作。
-- Premium 账号直接下载整批文件。普通账号按网页提示逐个确认，管理器会继续打开下一项。所有文件准备好后才统一应用到游戏。站外前置和 DLC 会列出作者填写的要求。
-- 已下载的 Mod 会加入发起下载时的配置档。切换配置档、勾选启用、移除或更换版本后，可点「应用配置」同步游戏目录。「启动游戏」会先应用当前配置，再通过 Steam 启动。
-- 点 Mod 列表上方的「导出 Mod 链接」，可将当前配置档中所有 Nexus 条目的链接复制到剪贴板，一行一个，包含已禁用的条目。保存了文件编号的条目会导出对应版本的页面。本地导入的文件没有记录 Nexus 链接。
-- 支持 PAK、ZIP，以及 Windows 自带 `tar.exe` 能解包的 7z 和 RAR。可安装 PAK 和配套 IoStore 文件。
-- 启用含 `js/main.js` 的 Mod 时，管理器可复用已有的 UE4SS Lite。首次需要部署时，它会从 [Mintcat 的发布源](https://github.com/iris-cat-dev/mintcat/blob/v0.5.5/src/apis/mintcat/release.ts)下载 UE4SS Lite 0.31.0，校验 SHA-256，再与 Mod 一起安装。切换至无需加载器的配置时，会撤下本工具部署的运行库文件。Lua Mod 需要作者要求的 UE4SS 或带 Lua 插件的 UE4SS Lite。
-- 本工具会跟踪自己部署的文件。检测到已有的同名游戏文件或其他工具改过的文件时，会保留现有文件并显示冲突路径。
-- 配置档和缓存位于 `%LOCALAPPDATA%\RogueCoreNexus`。
+运行要求：
+
+- 64 位 Windows，并装有 .NET Framework 4.8。Windows 10 1903 及以后的版本和 Windows 11 已经自带。
+- 一个 Nexus Mods 账号。免费账号和 Premium 账号都可以用。
+
+每个版本的说明里都写了 exe 的 SHA-256。想确认下载的文件完整，可以在 PowerShell 里运行 `Get-FileHash RogueCoreNexus.exe` 对照。
+
+## 快速上手
+
+1. 运行 `RogueCoreNexus.exe`。管理器会在 Steam 库里自动查找游戏。没找到时，打开「设置」，点「浏览」选择游戏的安装目录。
+2. 在「设置」里点「获取密钥 ↗」，在 Nexus 网页上复制你的个人 API 密钥，粘贴到设置里，点「保存设置」。
+3. 如果是免费账号，在「设置」里再点「启用浏览器回传」。Premium 账号可以跳过这一步。
+4. 在顶部输入框粘贴 Mod 的 Nexus 页面链接，例如 `https://www.nexusmods.com/deeprockgalacticroguecore/mods/149`，点「安装 Mod」或按回车。
+   - Mod 有多个文件时，会弹出列表让你选择版本。
+   - 链接里带 `file_id` 时，会直接选中这个文件。
+5. 安装完成后，点「启动游戏」。
+
+## Premium 与免费账号
+
+| | Premium 账号 | 免费账号 |
+|---|---|---|
+| 下载方式 | 管理器通过 Nexus API 直接下载 | 管理器在浏览器里打开 Nexus 下载页，你在网页上确认下载（「Slow download」按钮），网页再把下载链接交回管理器 |
+| 是否需要浏览器回传 | 不需要 | 需要 |
+| 一次装多个文件（含前置） | 自动逐个下载 | 每个文件确认一次，确认后管理器会自动打开下一个文件的页面 |
+
+浏览器里登录的 Nexus 账号必须和 API 密钥属于同一个账号，否则管理器会拒绝这次下载。
+
+**浏览器回传是什么：** 启用后，管理器会登记为 `nxm://` 链接的打开程序。登记只对当前 Windows 用户有效。这样 Nexus 网页确认下载后，链接会直接交给管理器。如果之前由 Vortex 等其他管理器处理 NXM 链接，启用时会先询问你。以后可以在设置的同一位置点「恢复原回传设置」改回去。
+
+更多背景见 [Nexus 的管理器下载说明](https://github.com/Nexus-Mods/Vortex/wiki/MODDINGWIKI-Users-General-Downloading-from-Nexus-Mods)。
+
+## 界面说明
+
+- **顶部右侧**
+  - 「设置」：游戏目录、API 密钥和浏览器回传。
+  - 「应用配置」：把当前配置档同步到游戏目录。
+  - 「启动游戏」：先应用配置，再通过 Steam 启动游戏。
+- **链接栏**
+  - 粘贴 Nexus 页面链接或 NXM 链接，然后点「安装 Mod」。
+  - 「导入本地」：安装电脑上已有的 Mod 文件。
+- **左侧**：选择、新建或复制配置档，下方显示当前的游戏目录。
+- **Mod 列表**
+  - 「启用」列的六边形指示灯：实心橙色表示启用，空心表示停用，点击即可切换。
+  - 「来源」列：橙色标签是 Nexus Mod 和它的编号，青色「本地」标签是从电脑导入的文件。
+  - 双击 Mod 名称，可以打开它的 Nexus 页面。
+- **底部状态栏**
+  - 左侧指示灯：青色表示就绪，橙色表示正在处理或在等你在网页上确认，红色表示上一步出错。
+  - 指示灯旁边显示当前进度或出错原因。
+  - 下载时右侧会出现进度条和「取消」按钮。
+
+把鼠标停在按钮、列表表头或指示灯上，可以看到简短说明。
+
+## 配置档
+
+- 每个配置档是一组 Mod 及各自的启用状态。安装或导入的 Mod 会加入当前配置档，并默认启用。
+- 「新建」创建一个空配置档。「复制」复制当前配置档，包括其中的 Mod 和启用状态。
+- 安装和导入会立即写入游戏目录。下面这些操作只会改配置档，点「应用配置」或「启动游戏」后才会改动游戏目录：
+  - 切换配置档
+  - 启用或停用 Mod
+  - 移除 Mod
+  - 更换 Mod 版本
+- Mod 列表上方的按钮：
+  - 「更换版本」：给选中的 Nexus Mod 选择另一个文件版本。
+  - 「移除」：把选中的 Mod 从当前配置档删除。
+  - 「导出 Mod 链接」：把当前配置档里所有 Nexus Mod 的链接复制到剪贴板，一行一个，停用的也包括在内。记录了文件编号的 Mod，导出的是对应版本的页面。本地导入的文件没有 Nexus 链接，不会导出。
+
+## 前置
+
+- 安装 Nexus Mod 时，管理器会检查两类前置：所选文件版本要求的前置，以及 Mod 页面上列出的前置。能从 Nexus 下载的《异动核心》前置，会加入同一批一起安装。
+- 已经下载过、而且版本符合要求的前置会直接复用，不会重复下载。
+- 一批文件全部下载并解包成功后，才会一起写入游戏。中途出错或点了「取消」，游戏目录和配置档都保持原样。
+- 站外前置和 DLC 无法自动安装。安装完成后，管理器会弹窗列出作者写的这些要求。
+- 已添加的 Nexus Mod，选中后点「补齐前置」，可以重新检查并补装缺少的前置。
+
+## 支持的文件
+
+- **压缩格式**：PAK、ZIP。7z 和 RAR 用 Windows 自带的 `tar.exe` 解包，只支持它能读取的压缩包。
+- **PAK Mod**：可以安装 PAK 文件，以及配套的 IoStore 文件（`.utoc`、`.ucas`）。
+- **UE4SS 脚本 Mod**：压缩包里带 `main.lua` 或 `main.js` 的 Mod。
+  - **JavaScript Mod**（含 `js/main.js`）：需要 UE4SS Lite。游戏目录里已有时直接复用。首次需要时，管理器会从 [Mintcat 的发布源](https://github.com/iris-cat-dev/mintcat/blob/v0.5.5/src/apis/mintcat/release.ts) 下载 UE4SS Lite 0.31.0，校验 SHA-256 后和 Mod 一起安装。切换到不需要加载器的配置档时，管理器会撤下它自己安装的这些运行库文件。
+  - **Lua Mod**：需要你按作者要求，自己安装 UE4SS 或带 Lua 插件的 UE4SS Lite。
+
+## 文件安全
+
+管理器会记录自己安装的每个文件和它的哈希值。遇到下面的情况，它会停下并在状态栏显示文件路径，不会覆盖：
+
+- 游戏目录里已有同名文件，且不是本工具安装的。内容完全相同的文件会直接沿用，不算冲突。
+- 本工具安装的文件被其他工具改动过。
+- 两个已启用的 Mod 要写入同一个位置。
+
+游戏运行时不能应用配置。应用过程被意外中断（例如断电）时，下次应用会先把游戏目录恢复到中断前的状态。
+
+## 数据位置与卸载
+
+配置档、下载缓存和安装记录都保存在 `%LOCALAPPDATA%\RogueCoreNexus`。
+
+API 密钥用 Windows DPAPI 加密，只有当前 Windows 用户能解密。换了电脑或 Windows 用户后，需要在设置里重新填写密钥。
+
+卸载步骤：
+
+1. 点「新建」创建一个空配置档，再点「应用配置」。这会撤下本工具装进游戏的所有文件。
+2. 如果启用过浏览器回传，在「设置」里点「恢复原回传设置」。
+3. 关闭管理器，删除 `RogueCoreNexus.exe` 和 `%LOCALAPPDATA%\RogueCoreNexus` 文件夹。
+
+## 常见问题
+
+**在 Nexus 网页上确认下载后，管理器没有反应。**
+打开「设置」，确认显示浏览器回传「已启用」。浏览器询问是否打开外部程序时，选择允许。
+
+**状态栏提示「网页授权使用了另一个 Nexus 账号」。**
+浏览器里登录的 Nexus 账号和 API 密钥不是同一个账号。切换网页登录的账号后，重新粘贴链接。
+
+**状态栏提示「NXM 下载授权已过期」。**
+网页确认的下载链接有有效期。回到 Nexus 页面重新确认下载即可。
+
+**状态栏提示「安装位置已有未受本工具管理的同名文件」。**
+游戏目录里有你手动放入或其他工具安装的同名文件。按提示的路径移走或删除这个文件，再点「应用配置」。
+
+**状态栏提示「请退出《异动核心》后再应用 Mod 配置」。**
+先关闭游戏，再应用配置。也可以直接点「启动游戏」，它会先应用配置再启动。
+
+**状态栏提示「请在设置中重新保存 Nexus API 密钥」。**
+保存的密钥无法解密，通常是换了电脑或 Windows 用户。在设置里重新填写密钥。
 
 ## 从源码构建
 
-使用 Windows 的 .NET Framework 4.8 C# 编译器构建。
+需要装有 .NET Framework 4.8 的 Windows。构建脚本使用系统自带的 C# 编译器，不需要安装 Visual Studio。
 
 ```powershell
-.\build.ps1
-.\build.ps1 -Test
+.\build.ps1          # 生成 dist\RogueCoreNexus.exe
+.\build.ps1 -Test    # 另外构建并运行冒烟测试
 ```
 
-测试通过模拟 Nexus API 与授权回传验证界面下载流程，并在独立的游戏目录中测试解包、启停、冲突处理和中断恢复。
+冒烟测试用模拟的 Nexus API 和浏览器回传，检查从粘贴链接到安装完成的界面流程。它还会在单独的模拟游戏目录里，测试解包、启用和停用、冲突处理和中断恢复。
 
-界面用到的横幅、徽标、水晶插图和程序图标在 `src/assets`。它们都是 `tools/generate-art.py` 用代码绘制的原创图形，没有使用游戏素材。构建脚本会把这些文件嵌入程序，并把 `app.ico` 设为 exe 图标。修改图形后，用装有 Pillow 和 NumPy 的 Python 重新生成：
+### 自动构建与发布
+
+GitHub Actions 会在 Windows 上运行 `.\build.ps1 -Test`。运行的时机是：每次推送到 `main`、每个 Pull Request，以及推送 `v*` 标签时。
+
+每次运行的 Artifacts 里有两项：
+
+- 构建出的 exe
+- 测试截取的界面截图
+
+发布新版本的步骤：
+
+1. 修改 `src/AssemblyInfo.cs` 和 `src/app.manifest` 里的版本号，提交并推送到 `main`。
+2. 创建附注标签并推送，例如 `git tag -a v0.2.4 -F notes.md` 和 `git push origin v0.2.4`。
+3. 测试通过后，工作流会创建同名 Release 并上传 exe。标签的说明文字会成为 Release 说明，末尾会自动加上 exe 的 SHA-256。
+
+如果推送的标签已经有 Release，工作流只替换其中的 exe，并更新说明里的 SHA-256。
+
+### 界面图片
+
+界面用到的横幅、徽标、水晶插图和程序图标都放在 `src/assets`。它们是 `tools/generate-art.py` 用代码绘制的原创图形，没有使用游戏素材。构建脚本会把这些文件嵌入程序，并把 `app.ico` 设为 exe 图标。
+
+修改图形后，用装有 Pillow 和 NumPy 的 Python 重新生成：
 
 ```powershell
 python tools\generate-art.py
 ```
+
+脚本每次生成的结果完全相同，所以仓库里的图片随时可以重新生成。

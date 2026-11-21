@@ -33,7 +33,7 @@ namespace RogueCoreNexus
             Theme.Style(this);
             Text = "设置";
             StartPosition = FormStartPosition.CenterParent;
-            ClientSize = new Size(680, 470);
+            ClientSize = new Size(680, 520);
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MinimizeBox = false;
             MaximizeBox = false;
@@ -79,7 +79,7 @@ namespace RogueCoreNexus
             Control keyField = Theme.Framed(key);
             keyField.Margin = new Padding(0, 3, 0, 4);
             layout.Controls.Add(keyField);
-            var keyHint = Theme.Label(String.IsNullOrEmpty(ApiKey) ? "密钥加密保存在当前 Windows 账户。" : "已保存密钥，留空继续使用。", true);
+            var keyHint = Theme.Label(String.IsNullOrEmpty(ApiKey) ? "密钥加密保存，只有当前 Windows 用户能读取。" : "已保存密钥。留空表示继续使用已保存的密钥。", true);
             layout.Controls.Add(keyHint);
             clearKey.FlatAppearance.BorderColor = Theme.Line;
             clearKey.FlatAppearance.CheckedBackColor = Theme.AccentDeep;
@@ -87,6 +87,7 @@ namespace RogueCoreNexus
 
             layout.Controls.Add(new Heading("浏览器回传", "NXM LINK") { Margin = new Padding(0, 14, 0, 0) });
             protocol.Margin = new Padding(0, 2, 0, 6);
+            protocol.MaximumSize = new Size(610, 0);
             layout.Controls.Add(protocol);
             register.Margin = Padding.Empty;
             register.Click += (sender, e) => ChangeRegistration();
@@ -133,7 +134,8 @@ namespace RogueCoreNexus
         private void RefreshProtocol()
         {
             bool enabled = BrowserRegistration.IsRegistered();
-            protocol.Text = enabled ? "浏览器授权回传已启用。" : "普通 Nexus 账号需要启用浏览器回传。";
+            protocol.Text = enabled ? "已启用。在 Nexus 网页确认下载后，下载链接会交给本管理器。" :
+                "免费 Nexus 账号需要启用：本管理器会成为 NXM 链接的打开程序，接收你在网页上确认的下载。Premium 账号可不启用。";
             register.Text = enabled ? "恢复原回传设置" : "启用浏览器回传";
         }
 

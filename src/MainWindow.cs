@@ -81,6 +81,7 @@ namespace RogueCoreNexus
             StartPosition = FormStartPosition.CenterScreen;
 
             BuildLayout();
+            Describe();
             BindControls();
             RefreshProfiles();
             UpdateIdentity();
@@ -387,6 +388,25 @@ namespace RogueCoreNexus
                 points[i] = new PointF(cx + radius * (float)Math.Cos(angle), cy + radius * (float)Math.Sin(angle));
             }
             return points;
+        }
+
+        private void Describe()
+        {
+            tooltip.SetToolTip(settings, "游戏目录、Nexus API 密钥和浏览器回传");
+            tooltip.SetToolTip(apply, "把当前配置档同步到游戏目录：安装已启用的 Mod，撤下其余由本工具安装的文件");
+            tooltip.SetToolTip(launch, "先应用当前配置档，再通过 Steam 启动游戏");
+            tooltip.SetToolTip(downloadButton, "下载链接对应的 Mod 及其前置，安装后加入当前配置档");
+            tooltip.SetToolTip(importButton, "安装电脑上的 PAK、ZIP、7z 或 RAR 文件");
+            tooltip.SetToolTip(addProfile, "新建一个空配置档");
+            tooltip.SetToolTip(copyProfile, "复制当前配置档，包括其中的 Mod 和启用状态");
+            tooltip.SetToolTip(update, "为选中的 Mod 选择另一个 Nexus 文件版本");
+            tooltip.SetToolTip(prerequisites, "重新检查选中 Mod 的前置，并补装缺少的部分");
+            tooltip.SetToolTip(remove, "从当前配置档移除选中的 Mod，点「应用配置」后删除游戏里的文件");
+            tooltip.SetToolTip(cancel, "停止当前下载或这批安装");
+            tooltip.SetToolTip(lamp, "青色：就绪\n橙色：正在处理，或在等你在 Nexus 网页上确认下载\n红色：上一步出错，原因见右侧文字");
+            mods.Columns[0].ToolTipText = "点击指示灯启用或停用，点「应用配置」后生效";
+            mods.Columns[1].ToolTipText = "双击名称打开 Mod 的 Nexus 页面";
+            mods.Columns[3].ToolTipText = "橙色：Nexus Mod 及其编号；青色：从电脑导入的文件";
         }
 
         private void BindControls()
