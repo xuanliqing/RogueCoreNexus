@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -30,19 +31,20 @@ namespace RogueCoreNexus
         private readonly Label gameLabel = Theme.Label("", true);
         private readonly Label modCount = Theme.Label("", true);
         private readonly Label status = Theme.Label("", true);
-        private readonly ProgressBar progress = new ProgressBar();
-        private readonly Button downloadButton = Theme.Button("安装 Mod", true);
-        private readonly Button importButton = Theme.Button("导入本地");
-        private readonly Button settings = Theme.Button("设置", width: 84);
-        private readonly Button apply = Theme.Button("应用配置");
-        private readonly Button launch = Theme.Button("启动游戏", true);
-        private readonly Button addProfile = Theme.Button("新建", width: 82);
-        private readonly Button copyProfile = Theme.Button("复制", width: 82);
-        private readonly Button exportLinks = Theme.Button("导出 Mod 链接", width: 126);
-        private readonly Button update = Theme.Button("更换版本", width: 96);
-        private readonly Button prerequisites = Theme.Button("补齐前置", width: 96);
-        private readonly Button remove = Theme.Button("移除", width: 78);
-        private readonly Button cancel = Theme.Button("取消", width: 64);
+        private readonly StatusLamp lamp = new StatusLamp();
+        private readonly HazardProgress progress = new HazardProgress();
+        private readonly Button downloadButton = Theme.Button("安装 Mod", true, 124, Glyph.Download);
+        private readonly Button importButton = Theme.Button("导入本地", width: 120, glyph: Glyph.Folder);
+        private readonly Button settings = Theme.Button("设置", width: 88, glyph: Glyph.Settings);
+        private readonly Button apply = Theme.Button("应用配置", width: 120, glyph: Glyph.Sync);
+        private readonly Button launch = Theme.Button("启动游戏", true, 128, Glyph.Play);
+        private readonly Button addProfile = Theme.Button("新建", width: 84, glyph: Glyph.Add);
+        private readonly Button copyProfile = Theme.Button("复制", width: 84, glyph: Glyph.Copy);
+        private readonly Button exportLinks = Theme.Button("导出 Mod 链接", width: 146, glyph: Glyph.Link);
+        private readonly Button update = Theme.Button("更换版本", width: 112, glyph: Glyph.Switch);
+        private readonly Button prerequisites = Theme.Button("补齐前置", width: 112, glyph: Glyph.Puzzle);
+        private readonly Button remove = Theme.Button("移除", width: 84, glyph: Glyph.Delete);
+        private readonly Button cancel = Theme.Button("取消", width: 84, glyph: Glyph.Cancel);
         private readonly ToolTip tooltip = new ToolTip();
         private NexusAccount account;
         private string apiKey;
@@ -74,8 +76,8 @@ namespace RogueCoreNexus
 
             Theme.Style(this);
             Text = Theme.Title;
-            ClientSize = new Size(1040, 612);
-            MinimumSize = new Size(850, 475);
+            ClientSize = new Size(1100, 680);
+            MinimumSize = new Size(900, 560);
             StartPosition = FormStartPosition.CenterScreen;
 
             BuildLayout();
@@ -87,87 +89,117 @@ namespace RogueCoreNexus
 
         private void BuildLayout()
         {
+            var shell = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 2, Margin = Padding.Empty };
+            shell.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            shell.RowStyles.Add(new RowStyle(SizeType.Absolute, 108));
+            shell.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
+            Controls.Add(shell);
+            shell.Controls.Add(BuildHeader(), 0, 0);
+
             var root = new TableLayoutPanel
             {
-                Dock = DockStyle.Fill, Padding = new Padding(20, 14, 20, 12),
-                ColumnCount = 1, RowCount = 4
+                Dock = DockStyle.Fill, Padding = new Padding(20, 12, 20, 8), Margin = Padding.Empty,
+                ColumnCount = 1, RowCount = 3
             };
             root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 72));
-            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 58));
+            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 68));
             root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 44));
-            Controls.Add(root);
+            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 42));
+            shell.Controls.Add(root, 0, 1);
 
-            var header = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 1, Margin = Padding.Empty };
-            header.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-            header.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-            var brand = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown, WrapContents = false, Margin = Padding.Empty };
-            var title = Theme.Label("Rogue Core Mod 管理器");
-            title.Font = new Font(Font.FontFamily, 19f, FontStyle.Bold);
-            title.Margin = new Padding(0, 0, 0, 2);
-            brand.Controls.Add(title);
-            brand.Controls.Add(accountLabel);
-            header.Controls.Add(brand, 0, 0);
-            var actions = Theme.ButtonRow();
-            actions.Anchor = AnchorStyles.Right;
-            actions.Controls.Add(settings);
-            actions.Controls.Add(apply);
-            actions.Controls.Add(launch);
-            header.Controls.Add(actions, 1, 0);
-            root.Controls.Add(header, 0, 0);
-
-            var input = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 3, Padding = new Padding(10, 8, 10, 4),
-                BackColor = Theme.Surface, Margin = new Padding(0, 0, 0, 8) };
+            var inputPanel = new HudPanel { Dock = DockStyle.Fill, Margin = new Padding(0, 0, 0, 10) };
+            var input = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 3, Margin = Padding.Empty };
             input.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             input.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             input.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             address.Font = new Font(Font.FontFamily, 11f);
-            address.Margin = new Padding(0, 5, 8, 0);
             address.MaxLength = 8192;
             address.Name = "NexusAddress";
             address.AccessibleName = "Nexus Mod 链接";
             downloadButton.Name = "InstallNexusMod";
             Theme.Cue(address, "粘贴 Nexus Mod 页面或 NXM 下载链接");
-            input.Controls.Add(address, 0, 0);
+            Control addressField = Theme.Framed(address, "NEXUS");
+            addressField.Margin = new Padding(0, 0, 6, 0);
+            input.Controls.Add(addressField, 0, 0);
             input.Controls.Add(downloadButton, 1, 0);
             input.Controls.Add(importButton, 2, 0);
-            root.Controls.Add(input, 0, 1);
+            inputPanel.Controls.Add(input);
+            root.Controls.Add(inputPanel, 0, 0);
 
             var body = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, Margin = Padding.Empty };
-            body.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 212));
+            body.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 222));
             body.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             body.Controls.Add(BuildSidebar(), 0, 0);
             body.Controls.Add(BuildModList(), 1, 0);
-            root.Controls.Add(body, 0, 2);
+            root.Controls.Add(body, 0, 1);
 
-            var footer = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 3, Margin = new Padding(0, 8, 0, 0) };
+            var footer = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 5, Margin = new Padding(0, 6, 0, 0) };
+            footer.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             footer.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             footer.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             footer.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            footer.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            lamp.Anchor = AnchorStyles.Left;
+            lamp.Margin = new Padding(0, 0, 6, 0);
             status.AutoSize = false;
             status.Name = "Status";
             status.AutoEllipsis = true;
             status.Dock = DockStyle.Fill;
             status.TextAlign = ContentAlignment.MiddleLeft;
-            progress.Width = 156;
-            progress.Height = 8;
+            progress.Width = 180;
+            progress.Height = 12;
             progress.Anchor = AnchorStyles.Right;
+            progress.Margin = new Padding(8, 0, 4, 0);
             progress.Visible = false;
             cancel.Visible = false;
-            footer.Controls.Add(status, 0, 0);
-            footer.Controls.Add(progress, 1, 0);
-            footer.Controls.Add(cancel, 2, 0);
-            root.Controls.Add(footer, 0, 3);
+            var version = Theme.Label("RCN v" + typeof(MainWindow).Assembly.GetName().Version.ToString(3), true);
+            version.Font = Theme.Display(10f);
+            version.ForeColor = Theme.Line;
+            version.Anchor = AnchorStyles.Right;
+            version.Margin = new Padding(12, 0, 0, 0);
+            footer.Controls.Add(lamp, 0, 0);
+            footer.Controls.Add(status, 1, 0);
+            footer.Controls.Add(progress, 2, 0);
+            footer.Controls.Add(cancel, 3, 0);
+            footer.Controls.Add(version, 4, 0);
+            root.Controls.Add(footer, 0, 2);
+        }
+
+        private Control BuildHeader()
+        {
+            var banner = new BannerPanel { Dock = DockStyle.Fill, Margin = Padding.Empty, Padding = new Padding(20, 12, 20, 16) };
+            var header = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 1, Margin = Padding.Empty,
+                BackColor = Color.Transparent };
+            header.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            header.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            var brand = new TableLayoutPanel { AutoSize = true, ColumnCount = 2, RowCount = 2, Anchor = AnchorStyles.Left,
+                Margin = Padding.Empty, BackColor = Color.Transparent };
+            var emblem = new ArtBox(Theme.Emblem) { Size = new Size(66, 66), Margin = new Padding(0, 0, 12, 0) };
+            brand.Controls.Add(emblem, 0, 0);
+            brand.SetRowSpan(emblem, 2);
+            brand.Controls.Add(new TitleMark("ROGUE CORE", "MOD 管理器", 25f) { Margin = Padding.Empty }, 1, 0);
+            accountLabel.BackColor = Color.Transparent;
+            accountLabel.Margin = new Padding(2, 0, 0, 0);
+            brand.Controls.Add(accountLabel, 1, 1);
+            header.Controls.Add(brand, 0, 0);
+            var actions = Theme.ButtonRow();
+            actions.Anchor = AnchorStyles.Right;
+            actions.BackColor = Color.Transparent;
+            actions.Controls.Add(settings);
+            actions.Controls.Add(apply);
+            actions.Controls.Add(launch);
+            header.Controls.Add(actions, 1, 0);
+            banner.Controls.Add(header);
+            return banner;
         }
 
         private Control BuildSidebar()
         {
-            var panel = new Panel { Dock = DockStyle.Fill, BackColor = Theme.Surface, Margin = new Padding(0, 0, 10, 0) };
+            var panel = new HudPanel { Dock = DockStyle.Fill, Margin = new Padding(0, 0, 10, 0), Art = Theme.Crystals };
             var layout = new TableLayoutPanel { Dock = DockStyle.Top, ColumnCount = 1, AutoSize = true,
-                AutoSizeMode = AutoSizeMode.GrowAndShrink, Padding = new Padding(12) };
+                AutoSizeMode = AutoSizeMode.GrowAndShrink, Padding = new Padding(4, 4, 4, 0) };
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-            layout.Controls.Add(Theme.Label("配置档"));
+            layout.Controls.Add(new Heading("配置档", "PROFILE"));
             profileList.DropDownStyle = ComboBoxStyle.DropDownList;
             profileList.FlatStyle = FlatStyle.Flat;
             profileList.BackColor = Theme.Field;
@@ -177,7 +209,7 @@ namespace RogueCoreNexus
             {
                 if (e.Index < 0 || e.Index >= profileList.Items.Count) return;
                 bool selected = (e.State & DrawItemState.Selected) != 0;
-                using (var brush = new SolidBrush(selected ? Color.FromArgb(46, 75, 70) : Theme.Field))
+                using (var brush = new SolidBrush(selected ? Theme.Selection : Theme.Field))
                     e.Graphics.FillRectangle(brush, e.Bounds);
                 TextRenderer.DrawText(e.Graphics, ((Profile)profileList.Items[e.Index]).Name, profileList.Font, e.Bounds, Theme.Text,
                     TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix);
@@ -192,10 +224,11 @@ namespace RogueCoreNexus
             buttons.Controls.Add(addProfile);
             buttons.Controls.Add(copyProfile);
             layout.Controls.Add(buttons);
-            var label = Theme.Label("游戏目录");
+            var label = new Heading("游戏目录", "GAME DIR");
             label.Margin = new Padding(0, 22, 0, 2);
             layout.Controls.Add(label);
-            gameLabel.MaximumSize = new Size(170, 0);
+            gameLabel.MaximumSize = new Size(180, 0);
+            gameLabel.Margin = new Padding(10, 2, 0, 4);
             layout.Controls.Add(gameLabel);
             panel.Controls.Add(layout);
             return panel;
@@ -203,15 +236,20 @@ namespace RogueCoreNexus
 
         private Control BuildModList()
         {
+            var frame = new HudPanel { Dock = DockStyle.Fill, Margin = Padding.Empty };
             var panel = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 2,
-                BackColor = Theme.Surface, Padding = new Padding(10, 4, 10, 10), Margin = Padding.Empty };
-            panel.RowStyles.Add(new RowStyle(SizeType.Absolute, 46));
+                Padding = new Padding(4, 0, 4, 4), Margin = Padding.Empty };
+            panel.RowStyles.Add(new RowStyle(SizeType.Absolute, 48));
             panel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-            var bar = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, Margin = Padding.Empty };
+            var bar = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 3, Margin = Padding.Empty };
+            bar.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             bar.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             bar.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            var heading = new Heading("Mod 列表", "LOADOUT") { Anchor = AnchorStyles.Left };
+            bar.Controls.Add(heading, 0, 0);
             modCount.Anchor = AnchorStyles.Left;
-            bar.Controls.Add(modCount, 0, 0);
+            modCount.Margin = new Padding(10, 4, 0, 4);
+            bar.Controls.Add(modCount, 1, 0);
             var buttons = Theme.ButtonRow();
             buttons.Anchor = AnchorStyles.Right;
             tooltip.SetToolTip(exportLinks, "将当前配置档中所有 Nexus Mod 的链接复制到剪贴板");
@@ -219,7 +257,7 @@ namespace RogueCoreNexus
             buttons.Controls.Add(prerequisites);
             buttons.Controls.Add(update);
             buttons.Controls.Add(remove);
-            bar.Controls.Add(buttons, 1, 0);
+            bar.Controls.Add(buttons, 2, 0);
             panel.Controls.Add(bar, 0, 0);
 
             mods.Dock = DockStyle.Fill;
@@ -234,22 +272,121 @@ namespace RogueCoreNexus
             mods.AllowUserToResizeRows = false;
             mods.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
             mods.MultiSelect = false;
-            mods.RowTemplate.Height = 35;
-            mods.ColumnHeadersHeight = 32;
+            mods.RowTemplate.Height = 36;
+            mods.ColumnHeadersHeight = 34;
+            mods.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
             mods.ColumnHeadersDefaultCellStyle.BackColor = Theme.Field;
-            mods.ColumnHeadersDefaultCellStyle.ForeColor = Theme.Text;
+            mods.ColumnHeadersDefaultCellStyle.ForeColor = Theme.AccentText;
             mods.DefaultCellStyle.BackColor = Theme.Background;
             mods.DefaultCellStyle.ForeColor = Theme.Text;
-            mods.DefaultCellStyle.SelectionBackColor = Color.FromArgb(46, 75, 70);
+            mods.DefaultCellStyle.SelectionBackColor = Theme.Selection;
             mods.DefaultCellStyle.SelectionForeColor = Theme.Text;
-            mods.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(23, 30, 34);
+            mods.DefaultCellStyle.Padding = new Padding(6, 0, 0, 0);
+            mods.AlternatingRowsDefaultCellStyle.BackColor = Color.FromArgb(18, 21, 25);
             mods.CellBorderStyle = DataGridViewCellBorderStyle.SingleHorizontal;
             mods.Columns.Add(new DataGridViewCheckBoxColumn { HeaderText = "启用", Width = 62 });
             mods.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "名称", AutoSizeMode = DataGridViewAutoSizeColumnMode.Fill, ReadOnly = true, MinimumWidth = 160 });
             mods.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "版本", Width = 108, ReadOnly = true });
-            mods.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "来源", Width = 108, ReadOnly = true });
+            mods.Columns.Add(new DataGridViewTextBoxColumn { HeaderText = "来源", Width = 120, ReadOnly = true });
+            mods.Columns[2].DefaultCellStyle.Font = Theme.Display(11.5f);
+            mods.Columns[2].DefaultCellStyle.ForeColor = Theme.AccentText;
+            mods.CellPainting += (sender, e) => PaintModCell(e);
+            mods.RowPostPaint += (sender, e) =>
+            {
+                if (!mods.Rows[e.RowIndex].Selected) return;
+                using (var mark = new SolidBrush(Theme.Accent)) e.Graphics.FillRectangle(mark, e.RowBounds.Left, e.RowBounds.Top, 3, e.RowBounds.Height - 1);
+            };
+            mods.Paint += (sender, e) => PaintEmptyList(e.Graphics);
+            mods.Resize += (sender, e) => { if (mods.Rows.Count == 0) mods.Invalidate(); };
             panel.Controls.Add(mods, 0, 1);
-            return panel;
+            frame.Controls.Add(panel);
+            return frame;
+        }
+
+        private void PaintModCell(DataGridViewCellPaintingEventArgs e)
+        {
+            Graphics g = e.Graphics;
+            float k = Theme.Scale(g);
+            Rectangle cell = e.CellBounds;
+            if (e.RowIndex < 0)
+            {
+                if (e.ColumnIndex < 0) return;
+                using (var back = new SolidBrush(Theme.Field)) g.FillRectangle(back, cell);
+                using (var line = new SolidBrush(Theme.AccentDeep)) g.FillRectangle(line, cell.Left, cell.Bottom - 2, cell.Width, 2);
+                var flags = TextFormatFlags.SingleLine | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix | TextFormatFlags.EndEllipsis |
+                    (e.ColumnIndex == 0 ? TextFormatFlags.HorizontalCenter : TextFormatFlags.Left);
+                var text = new Rectangle(cell.Left + (e.ColumnIndex == 0 ? 0 : (int)(6 * k)), cell.Top, cell.Width - (int)(6 * k), cell.Height - 2);
+                TextRenderer.DrawText(g, Convert.ToString(e.Value), Theme.Strong(9f), text, Theme.AccentText, flags);
+                e.Handled = true;
+                return;
+            }
+            if (e.ColumnIndex != 0 && e.ColumnIndex != 3) return;
+            e.PaintBackground(cell, (e.State & DataGridViewElementStates.Selected) != 0);
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            float cx = cell.Left + cell.Width / 2f, cy = cell.Top + cell.Height / 2f;
+            if (e.ColumnIndex == 0)
+            {
+                bool on = Convert.ToBoolean(e.Value);
+                PointF[] outer = Hexagon(cx, cy, 8 * k), inner = Hexagon(cx, cy, 4.5f * k);
+                if (on)
+                {
+                    using (var glow = new SolidBrush(Color.FromArgb(50, Theme.Accent))) g.FillPolygon(glow, Hexagon(cx, cy, 11 * k));
+                    using (var fill = new SolidBrush(Theme.Accent)) g.FillPolygon(fill, outer);
+                    using (var core = new SolidBrush(Theme.AccentHot)) g.FillPolygon(core, inner);
+                }
+                else
+                {
+                    using (var fill = new SolidBrush(Theme.Background)) g.FillPolygon(fill, outer);
+                    using (var pen = new Pen(Theme.Line, 1.5f * k)) g.DrawPolygon(pen, outer);
+                }
+            }
+            else
+            {
+                string text = Convert.ToString(e.FormattedValue);
+                bool nexus = e.RowIndex < mods.Rows.Count && mods.Rows[e.RowIndex].Tag is ModEntry && ((ModEntry)mods.Rows[e.RowIndex].Tag).ModId != 0;
+                Color tint = nexus ? Theme.Accent : Theme.Crystal;
+                Font font = Theme.Display(10.5f);
+                Size size = TextRenderer.MeasureText(g, text, font, Size.Empty, TextFormatFlags.NoPadding);
+                var chip = new RectangleF(cell.Left + 6 * k, cy - size.Height / 2f - 3 * k, size.Width + 16 * k, size.Height + 6 * k);
+                using (GraphicsPath shape = Theme.Chamfer(chip, 5 * k))
+                using (var fill = new SolidBrush(Color.FromArgb(34, tint)))
+                using (var pen = new Pen(Color.FromArgb(150, tint)))
+                {
+                    g.FillPath(fill, shape);
+                    g.DrawPath(pen, shape);
+                }
+                TextRenderer.DrawText(g, text, font, Rectangle.Round(chip), tint, TextFormatFlags.SingleLine |
+                    TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding | TextFormatFlags.NoPrefix);
+            }
+            g.SmoothingMode = SmoothingMode.Default;
+            e.Paint(cell, DataGridViewPaintParts.Border);
+            e.Handled = true;
+        }
+
+        private void PaintEmptyList(Graphics g)
+        {
+            if (mods.Rows.Count != 0) return;
+            float k = Theme.Scale(g);
+            var area = new Rectangle(0, mods.ColumnHeadersHeight, mods.ClientSize.Width, mods.ClientSize.Height - mods.ColumnHeadersHeight);
+            float side = Math.Min(96 * k, area.Height * 0.4f);
+            float top = area.Top + (area.Height - side - 64 * k) / 2;
+            if (side < 32 || Theme.Emblem == null) return;
+            Theme.DrawImage(g, Theme.Emblem, new RectangleF(area.Left + (area.Width - side) / 2, top, side, side), 0.35f);
+            var flags = TextFormatFlags.HorizontalCenter | TextFormatFlags.Top | TextFormatFlags.NoPrefix | TextFormatFlags.EndEllipsis;
+            int y = (int)(top + side + 12 * k);
+            TextRenderer.DrawText(g, "这个配置档还没有 Mod", Theme.Strong(11f), new Rectangle(area.Left, y, area.Width, (int)(26 * k)), Theme.Text, flags);
+            TextRenderer.DrawText(g, "在上方粘贴 Nexus 链接，或导入本地文件", Font, new Rectangle(area.Left, y + (int)(28 * k), area.Width, (int)(24 * k)), Theme.Dim, flags);
+        }
+
+        private static PointF[] Hexagon(float cx, float cy, float radius)
+        {
+            var points = new PointF[6];
+            for (int i = 0; i < 6; i++)
+            {
+                double angle = Math.PI / 6 + i * Math.PI / 3;
+                points[i] = new PointF(cx + radius * (float)Math.Cos(angle), cy + radius * (float)Math.Sin(angle));
+            }
+            return points;
         }
 
         private void BindControls()
@@ -268,7 +405,7 @@ namespace RogueCoreNexus
             {
                 await ApplyAsync(state.Current(), token);
                 Program.Open("steam://run/" + GameLocation.SteamId);
-                SetStatus("已请求 Steam 启动《异动核心》。");
+                SetStatus("已请求 Steam 启动《异动核心》。Rock and Stone!");
             });
             cancel.Click += (sender, e) =>
             {
@@ -632,7 +769,7 @@ namespace RogueCoreNexus
             modal = true;
             try
             {
-                using (var dialog = new Form { Text = duplicate ? "复制配置档" : "新建配置档", ClientSize = new Size(420, 110),
+                using (var dialog = new Form { Text = duplicate ? "复制配置档" : "新建配置档", ClientSize = new Size(420, 116),
                     StartPosition = FormStartPosition.CenterParent, FormBorderStyle = FormBorderStyle.FixedDialog,
                     MinimizeBox = false, MaximizeBox = false, ShowInTaskbar = false })
                 {
@@ -641,8 +778,11 @@ namespace RogueCoreNexus
                     name.Text = duplicate ? state.Current().Name + " 副本" : "";
                     Theme.Cue(name, "配置档名称");
                     var form = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(16), ColumnCount = 1, RowCount = 2 };
-                    form.Controls.Add(name, 0, 0);
-                    var button = Theme.Button("保存", true);
+                    form.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+                    Control field = Theme.Framed(name, "NAME");
+                    field.Margin = new Padding(0, 0, 0, 10);
+                    form.Controls.Add(field, 0, 0);
+                    var button = Theme.Button("保存", true, glyph: Glyph.Accept);
                     button.Anchor = AnchorStyles.Right;
                     button.DialogResult = DialogResult.OK;
                     form.Controls.Add(button, 0, 1);
@@ -761,6 +901,7 @@ namespace RogueCoreNexus
                 profileList, addProfile, copyProfile, exportLinks, mods }) control.Enabled = idle;
             UpdateSelectionButtons();
             cancel.Visible = !idle;
+            UpdateLamp();
         }
 
         private void UpdateSelectionButtons()
@@ -786,6 +927,12 @@ namespace RogueCoreNexus
             status.Text = text;
             status.ForeColor = error ? Theme.Error : Theme.Dim;
             tooltip.SetToolTip(status, text);
+            UpdateLamp();
+        }
+
+        private void UpdateLamp()
+        {
+            lamp.Light = status.ForeColor == Theme.Error ? Theme.Error : operation != null || pendingPlan != null ? Theme.Accent : Theme.Crystal;
         }
 
         private void ShowError(Exception error)

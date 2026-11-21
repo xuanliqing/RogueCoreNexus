@@ -32,3 +32,9 @@
 ```
 
 测试通过模拟 Nexus API 与授权回传验证界面下载流程，并在独立的游戏目录中测试解包、启停、冲突处理和中断恢复。
+
+界面用到的横幅、徽标、水晶插图和程序图标在 `src/assets`。它们都是 `tools/generate-art.py` 用代码绘制的原创图形，没有使用游戏素材。构建脚本会把这些文件嵌入程序，并把 `app.ico` 设为 exe 图标。修改图形后，用装有 Pillow 和 NumPy 的 Python 重新生成：
+
+```powershell
+python tools\generate-art.py
+```
