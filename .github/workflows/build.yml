@@ -34,7 +34,7 @@ jobs:
           path: build/*.png
           if-no-files-found: ignore
 
-  # A pushed v* tag replaces the exe on that tag's release (or creates the release) after the tests pass.
+  # A pushed v* tag replaces the exe on that tag's release, or creates the release, after the tests pass.
   release:
     needs: windows
     if: startsWith(github.ref, 'refs/tags/v')
@@ -64,7 +64,11 @@ jobs:
             gh release upload "$TAG" RogueCoreNexus.exe --clobber
             gh release edit "$TAG" --notes-file notes.md
           else
-            printf '%s\n' "$line" > notes.md
+            # An annotated tag's message becomes the release notes, followed by the checksum.
+            ref=$(gh api "repos/$GH_REPO/git/ref/tags/$TAG" --jq '.object.type + " " + .object.sha')
+            message=""
+            if [ "${ref%% *}" = tag ]; then message=$(gh api "repos/$GH_REPO/git/tags/${ref#* }" --jq .message); fi
+            if [ -n "$message" ]; then printf '%s\n\n%s\n' "$message" "$line" > notes.md; else printf '%s\n' "$line" > notes.md; fi
             gh release create "$TAG" RogueCoreNexus.exe --title "Rogue Core Nexus Manager $TAG" --notes-file notes.md
           fi
           echo "$TAG RogueCoreNexus.exe SHA-256 $sha"
